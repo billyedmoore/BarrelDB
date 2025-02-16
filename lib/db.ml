@@ -1,3 +1,5 @@
+exception Invalid_input
+
 type dbError = NotImplementedError | LoadingDatabaseNotImplementedError | DataBaseNotOpen
 
 type keyDirEntry = {
@@ -38,9 +40,20 @@ let get_file_size filename = match Sys.file_exists filename with
     | true -> (Unix.stat filename).st_size
     | false -> 0
 
-let rec bytes_of_int (num:int) (i:int) (n_bytes:int) (bytes:Bytes.t) = match i with
-    | _ when i = n_bytes -> bytes
-    | _ -> (Bytes.set bytes i (Char.chr((Int.shift_left num (8 * i)) mod 256))); bytes_of_int num (i+1) n_bytes bytes
+(* Big Endian *)
+let bytes_of_int (number:int) (number_bytes:int) = 
+    let rec loop (num:int) (i:int) (n_bytes:int) (bytes:Bytes.t) = match i with
+        | _ when i = n_bytes -> bytes
+        | _ -> let byte = ((num lsr ((n_bytes-i-1) * 8)) land 0xFF) in
+            Bytes.set bytes i (Char.chr byte);
+            loop num (i+1) n_bytes bytes 
+        in
+
+    (* Check can be represented *)
+    if ((float_of_int 2) ** (float_of_int (number_bytes * 8))) <= (float_of_int number) then raise Invalid_input;
+
+    loop number 0 number_bytes (Bytes.make number_bytes (Char.chr 0))
+
 
 let create_disk_entry (key: string) (value: string) : diskEntry = 
     let key_bytes = Bytes.of_string key in
@@ -56,9 +69,9 @@ let create_disk_entry (key: string) (value: string) : diskEntry =
 
 let encode_disk_entry (disk_entry:diskEntry) = Bytes.concat Bytes.empty [
     disk_entry.crc; (* 32 bits *) 
-    bytes_of_int (int_of_float disk_entry.timestamp) 0 4 (Bytes.create 4); (* 32 bit *)
-    bytes_of_int disk_entry.key_size 0 4 (Bytes.create 4);
-    bytes_of_int disk_entry.value_size 0 4 (Bytes.create 4);
+    bytes_of_int (int_of_float disk_entry.timestamp) 8; (* 32 bit *)
+    bytes_of_int disk_entry.key_size 4;
+    bytes_of_int disk_entry.value_size 4;
     disk_entry.key;
     disk_entry.value;
 ]
