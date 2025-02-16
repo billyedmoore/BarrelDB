@@ -1,5 +1,3 @@
-module StringMap : Map.S with type key = string
-
 type dbError = NotImplementedError | LoadingDatabaseNotImplementedError | DataBaseNotOpen
 
 type keyDirEntry = {
@@ -10,7 +8,7 @@ type keyDirEntry = {
 
 type dbSession = {
     db_name: string;
-    key_dir: keyDirEntry StringMap.t;
+    key_dir: (string,keyDirEntry) Hashtbl.t;
 }
 
 (** dbError to a string **)

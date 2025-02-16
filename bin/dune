@@ -1,4 +1,4 @@
 (executable
  (public_name barrelDB)
  (name main)
- (libraries barrelDB))
+ (libraries unix barrelDB))

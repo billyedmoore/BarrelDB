@@ -27,3 +27,6 @@ setup.log
 
 # Local OPAM switch
 _opam/
+
+# I think I am funny (I am not), this is the where db is being saved
+important_data.db/*
