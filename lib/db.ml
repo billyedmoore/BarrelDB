@@ -11,6 +11,7 @@ type keyDirEntry = {
 type dbSession = {
     db_name: string;
     key_dir: (string,keyDirEntry) Hashtbl.t;
+    active_file: string;
 }
 
 type diskEntry = {
@@ -29,12 +30,6 @@ let err_to_string err = match err with
     | LoadingDatabaseNotImplementedError -> "LoadingDatabaseNotImplementedError - Loading an existing database isn't supported yet."
 
 let create_dir path = if not (Sys.file_exists path) then Sys.mkdir path 0o777 (* Full Permissions *)
-
-
-(* TODO: consider having more than 1 file and how the name should be decided and remembered in this case *)
-let get_active_file_path (db_session: dbSession) = match (Sys.file_exists (db_session.db_name ^ "/active")) with
-    | true -> db_session.db_name ^ "/active"
-    | false -> create_dir db_session.db_name; db_session.db_name ^ "/active"
 
 let get_file_size filename = match Sys.file_exists filename with 
     | true -> (Unix.stat filename).st_size
@@ -77,7 +72,9 @@ let encode_disk_entry (disk_entry:diskEntry) = Bytes.concat Bytes.empty [
 ]
 
 let append_disk_entry_to_file (db_session: dbSession) (disk_entry:diskEntry)= 
-    let filename = (get_active_file_path db_session) in 
+    (*Only creates dir if dir doesnt exist*)
+    create_dir db_session.db_name 
+    let filename = db_session.db_name ^ "/" ^ db_session.active_file in 
     let current_length = get_file_size filename in
     if current_length = 0 then close_out (open_out filename);
     let f = open_out_gen [Open_append; Open_binary] 0o600 filename in
@@ -86,11 +83,18 @@ let append_disk_entry_to_file (db_session: dbSession) (disk_entry:diskEntry)=
     let dir_entry = {file_name = filename; value_size = disk_entry.value_size; value_pos = current_length} in
     Hashtbl.add db_session.key_dir (Bytes.to_string disk_entry.key) dir_entry  
 
+let get_random_string (length: int): string =
+    let rec loop (remaining_chars: int) (str: string) = match remaining_chars with
+        | 0 -> str
+        | _ -> loop (remaining_chars-1) (str ^ (Char.escaped (Char.chr ((Random.int 26) + 97)))) in 
+    loop length ""
+
 (* External API *)
 let create db_name =  match Sys.file_exists db_name with
     | true -> Result.error LoadingDatabaseNotImplementedError
     | false -> create_dir db_name; 
-        Result.ok {db_name=db_name;key_dir = Hashtbl.create 100}
+        print_endline (get_random_string 10);
+        Result.ok {db_name=db_name; key_dir=Hashtbl.create 100; active_file=(get_random_string 10)}
 
 let get _ _  = Result.error NotImplementedError
 let put db_session key value  = append_disk_entry_to_file db_session (create_disk_entry key value); Option.none

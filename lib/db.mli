@@ -9,6 +9,7 @@ type keyDirEntry = {
 type dbSession = {
     db_name: string;
     key_dir: (string,keyDirEntry) Hashtbl.t;
+    active_file: string;
 }
 
 (** dbError to a string **)
