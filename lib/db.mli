@@ -1,4 +1,4 @@
-type dbError = NotImplementedError | LoadingDatabaseNotImplementedError | DataBaseNotOpen
+type dbError = NotImplementedError | NoDatabaseOpen | DatabaseNotFound | DatabaseExists
 
 type keyDirEntry = {
     file_name: string;
@@ -15,9 +15,13 @@ type dbSession = {
 (** dbError to a string **)
 val err_to_string: dbError -> string
 
-(** Open database _, returns a result either
-    empty or containing an Error.**)
+(** Create database _, returns either the dbSession
+    or an containing an Error.**)
 val create: string -> (dbSession,dbError) result
+
+(** Load database _, returns either the dbSession
+    or an containing an Error.**)
+val load: string -> (dbSession,dbError) result
 
 (** Get from database _ key _, returns a result 
     containing the found string or an Error.**)

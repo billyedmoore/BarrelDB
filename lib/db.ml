@@ -1,4 +1,4 @@
-type dbError = NotImplementedError | LoadingDatabaseNotImplementedError | DataBaseNotOpen
+type dbError = NotImplementedError | NoDatabaseOpen | DatabaseNotFound | DatabaseExists
 
 type keyDirEntry = {
     file_name: string;
@@ -23,8 +23,9 @@ type diskEntry = {
 
 let err_to_string err = match err with
     | NotImplementedError -> "NotImplementedError - Function is yet to be implemented."
-    | DataBaseNotOpen -> "DataBaseNotOpen - Database you are performing actions on isn't open please use Db.create to create it."
-    | LoadingDatabaseNotImplementedError -> "LoadingDatabaseNotImplementedError - Loading an existing database isn't supported yet."
+    | NoDatabaseOpen -> "NoDatabaseOpen - No open database."
+    | DatabaseNotFound -> "DatabaseNotFound - Database you tried to load could not be found."
+    | DatabaseExists -> "DatabaseExists - Database already exists."
 
 let create_dir path = if not (Sys.file_exists path) then Sys.mkdir path 0o777 (* Full Permissions *)
 
@@ -75,10 +76,15 @@ let get_random_string (length: int): string =
     loop length ""
 
 (* External API *)
+
 let create db_name =  match Sys.file_exists db_name with
-    | true -> Result.error LoadingDatabaseNotImplementedError
+    | true -> Result.error DatabaseExists
     | false -> create_dir db_name; 
         Result.ok {db_name=db_name; key_dir=Hashtbl.create 100; active_file=(get_random_string 10)}
+
+let load db_name = match Sys.file_exists db_name with
+    | true -> Result.error NotImplementedError
+    | false -> Result.error DatabaseNotFound
 
 let get _ _  = Result.error NotImplementedError
 let put db_session key value  = append_disk_entry_to_file db_session (create_disk_entry key value); Option.none
