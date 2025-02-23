@@ -13,11 +13,11 @@ let crc32 (input: bytes) =
 
     process_bytes (0xFFFFFFFF) (input) 0
 
-(* Big Endian *)
+(* Little Endian *)
 let bytes_of_int ~(value:int) (number_bytes:int) = 
     let rec loop (num:int) (i:int) (n_bytes:int) (bytes:Bytes.t) = match i with
         | _ when i = n_bytes -> bytes
-        | _ -> let byte = ((num lsr ((n_bytes-i-1) * 8)) land 0xFF) in
+        | _ -> let byte = ((num lsr (i * 8)) land 0xFF) in
             Bytes.set bytes i (Char.chr byte);
             loop num (i+1) n_bytes bytes 
         in
@@ -28,3 +28,12 @@ let bytes_of_int ~(value:int) (number_bytes:int) =
     if (number_bytes > 1000000) then raise Invalid_input;
 
     loop value 0 number_bytes (Bytes.make number_bytes (Char.chr 0))
+
+(* Little Endian *)
+let int_of_bytes (bytes: Bytes.t) = 
+    let rec loop (num:int) (i:int) = match i with
+        | _ when i = Bytes.length bytes -> num
+        | _ -> let byte = int_of_char (Bytes.get bytes i) in 
+            loop (num + (byte lsl (i*8))) (i + 1) in
+    loop 0 0
+
