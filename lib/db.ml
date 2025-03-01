@@ -91,7 +91,7 @@ let new_database_session (db_name: string) = {db_name=db_name; key_dir=(Hashtbl.
 let rec scan_file (db_session: dbSession) (file_stream: in_channel) (filename: string) = 
     let add_to_key_dir (filename:string) (key:string) (value_size:int) (value_pos:int) (timestamp:int) (db_session: dbSession) = 
         (Hashtbl.add db_session.key_dir key {file_name=filename; value_size=value_size; value_pos=value_pos; timestamp=timestamp}) in 
-    let result = (scan_record_chunk file_stream) in
+    let result = try (scan_record_chunk file_stream) with End_of_file -> None in
     match result with 
         | None -> ()
         | Some res -> let (timestamp,key,value_pos,value_size) = res in
