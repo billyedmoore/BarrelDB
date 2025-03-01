@@ -2,6 +2,7 @@ type dbError = NotImplementedError | NoDatabaseOpen | DatabaseNotFound | Databas
 
 type keyDirEntry = {
     file_name: string;
+    timestamp: int;
     value_size: int;
     value_pos: int;
 }
