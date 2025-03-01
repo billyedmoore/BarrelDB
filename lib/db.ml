@@ -3,9 +3,10 @@ type dbError =
   | NoDatabaseOpen
   | DatabaseNotFound
   | DatabaseExists
+  | KeyNotFound
+  | FileReadError
 
-type keyDirEntry =
-  {file_name: string; timestamp: int; value_size: int; value_pos: int}
+type keyDirEntry = {filename: string; timestamp: int; value_size: int; pos: int}
 
 type dbSession =
   { db_name: string
@@ -13,12 +14,7 @@ type dbSession =
   ; active_file: string }
 
 type diskEntry =
-  { timestamp: float
-  ; key_size: int
-  ; value_size: int
-  ; (* The string -> bytes conversion is done when diskEntry is created *)
-    key: bytes
-  ; value: bytes }
+  {timestamp: int; key_size: int; value_size: int; key: string; value: string}
 
 let err_to_string err =
   match err with
@@ -28,6 +24,10 @@ let err_to_string err =
       "NoDatabaseOpen - No open database."
   | DatabaseNotFound ->
       "DatabaseNotFound - Database you tried to load could not be found."
+  | KeyNotFound ->
+      "KeyNotFound - Key not found in database."
+  | FileReadError ->
+      "FileReadError - Error with file read."
   | DatabaseExists ->
       "DatabaseExists - Database already exists."
 
@@ -54,26 +54,23 @@ let get_random_string (length : int) : string =
   loop length ""
 
 let create_disk_entry (key : string) (value : string) : diskEntry =
-  let key_bytes = Bytes.of_string key in
-  let value_bytes = Bytes.of_string value in
-  { timestamp= Unix.time ()
-  ; key_size= Bytes.length key_bytes
-  ; value_size= Bytes.length value_bytes
-  ; key= key_bytes
-  ; value= value_bytes }
+  { timestamp= int_of_float (Unix.time ())
+  ; key_size= String.length key
+  ; value_size= String.length value
+  ; key
+  ; value }
 
 (* Side-effect: advance file_stream by number_bytes*)
 (* Raises End_of_file if end of file is reached unexpectedly or there is no bytes to read. *)
 let read_input_bytes (file_stream : in_channel) (number_bytes : int) : Bytes.t =
   let buffer = Bytes.create number_bytes in
-  really_input file_stream buffer (pos_in file_stream) number_bytes ;
-  seek_in file_stream (pos_in file_stream + number_bytes) ;
+  really_input file_stream buffer 0 number_bytes ;
   buffer
 
 (* Raises End_of_file if end of file is reached unexpectedly or there is no record to read *)
-(* Returns (timestamp,key,start_pos) *)
-let scan_record_chunk (file_stream : in_channel) :
-    (int * string * int64 * int) option =
+(* Returns (timestamp,key,start_pos,value_size) *)
+let scan_record_chunk (file_stream : in_channel) : (diskEntry * int) option =
+  let block_pos = Int64.to_int (In_channel.pos file_stream) in
   let crc_size = 4 in
   let crc = read_input_bytes file_stream crc_size in
   let timestamp_size = 4 in
@@ -84,20 +81,35 @@ let scan_record_chunk (file_stream : in_channel) :
   let key_size_as_int = BinaryUtils.int_of_bytes key_size in
   let value_size_as_int = BinaryUtils.int_of_bytes value_size in
   let key = read_input_bytes file_stream key_size_as_int in
-  let value_pos = In_channel.pos file_stream in
   let value = read_input_bytes file_stream value_size_as_int in
   let payload =
     Bytes.concat Bytes.empty [timestamp; key_size; value_size; key; value]
   in
+  let disk_entry =
+    { timestamp= BinaryUtils.int_of_bytes timestamp
+    ; key_size= key_size_as_int
+    ; value_size= value_size_as_int
+    ; key= Bytes.to_string key
+    ; value= Bytes.to_string value }
+  in
   match BinaryUtils.crc32 payload = BinaryUtils.int_of_bytes crc with
   | true ->
-      Option.some
-        ( BinaryUtils.int_of_bytes timestamp
-        , Bytes.to_string key
-        , value_pos
-        , value_size_as_int )
+      Option.some (disk_entry, block_pos)
   | false ->
       None
+
+(* Raises Not_found if key not in database *)
+let get_value (db_session : dbSession) (key : string) : string =
+  (* TODO: switch to results based error handling *)
+  let key_dir_entry = Hashtbl.find db_session.key_dir key in
+  let f = open_in_gen [Open_rdonly; Open_binary] 0o600 key_dir_entry.filename in
+  seek_in f key_dir_entry.pos ;
+  match scan_record_chunk f with
+  | None ->
+      raise (Invalid_argument "Couldn't scan record chunk.")
+  | Some disk_entry_and_pos ->
+      let disk_entry, _ = disk_entry_and_pos in
+      disk_entry.value
 
 let new_database_session (db_name : string) =
   {db_name; key_dir= Hashtbl.create 100; active_file= get_random_string 10}
@@ -108,23 +120,23 @@ let rec scan_file (db_session : dbSession) (file_stream : in_channel)
   let add_to_key_dir (filename : string) (key : string) (value_size : int)
       (value_pos : int) (timestamp : int) (db_session : dbSession) =
     Hashtbl.add db_session.key_dir key
-      {file_name= filename; value_size; value_pos; timestamp}
+      {filename; value_size; pos= value_pos; timestamp}
   in
   let result = try scan_record_chunk file_stream with End_of_file -> None in
   match result with
   | None ->
       ()
   | Some res -> (
-      let timestamp, key, value_pos, value_size = res in
-      let current_val = Hashtbl.find_opt db_session.key_dir key in
+      let disk_entry, disk_pos = res in
+      let current_val = Hashtbl.find_opt db_session.key_dir disk_entry.key in
       match current_val with
       | Some value ->
-          if value.timestamp < timestamp then
-            add_to_key_dir filename key value_size (Int64.to_int value_pos)
-              timestamp db_session
+          if value.timestamp < disk_entry.timestamp then
+            add_to_key_dir filename disk_entry.key disk_entry.value_size
+              disk_pos disk_entry.timestamp db_session
       | None ->
-          add_to_key_dir filename key value_size (Int64.to_int value_pos)
-            timestamp db_session ;
+          add_to_key_dir filename disk_entry.key disk_entry.value_size disk_pos
+            disk_entry.timestamp db_session ;
           scan_file db_session file_stream filename )
 
 let load_file (db_session : dbSession) (filename : string) : unit =
@@ -151,12 +163,12 @@ let load_database (db_name : string) : dbSession =
 let encode_disk_entry (disk_entry : diskEntry) : Bytes.t =
   let payload =
     Bytes.concat Bytes.empty
-      [ BinaryUtils.bytes_of_int ~value:(int_of_float disk_entry.timestamp) 4
+      [ BinaryUtils.bytes_of_int ~value:disk_entry.timestamp 4
       ; (* 32 bit *)
         BinaryUtils.bytes_of_int ~value:disk_entry.key_size 4
       ; BinaryUtils.bytes_of_int ~value:disk_entry.value_size 4
-      ; disk_entry.key
-      ; disk_entry.value ]
+      ; Bytes.of_string disk_entry.key
+      ; Bytes.of_string disk_entry.value ]
   in
   Bytes.concat Bytes.empty
     [BinaryUtils.bytes_of_int ~value:(BinaryUtils.crc32 payload) 4; payload]
@@ -171,12 +183,12 @@ let commit_entry (db_session : dbSession) (disk_entry : diskEntry) =
   output_bytes f (encode_disk_entry disk_entry) ;
   close_out f ;
   let dir_entry =
-    { file_name= filename
+    { filename
     ; value_size= disk_entry.value_size
-    ; value_pos= current_length
-    ; timestamp= int_of_float disk_entry.timestamp }
+    ; pos= current_length
+    ; timestamp= disk_entry.timestamp }
   in
-  Hashtbl.add db_session.key_dir (Bytes.to_string disk_entry.key) dir_entry
+  Hashtbl.add db_session.key_dir disk_entry.key dir_entry
 
 (* External API *)
 
@@ -195,7 +207,12 @@ let load db_name =
   | false ->
       Result.error DatabaseNotFound
 
-let get _ _ = Result.error NotImplementedError
+let get (db_session : dbSession) (key : string) : (string, dbError) result =
+  try Result.ok (get_value db_session key) with
+  | Not_found ->
+      Result.error KeyNotFound
+  | Invalid_argument _ ->
+      Result.error FileReadError
 
 let put db_session key value =
   commit_entry db_session (create_disk_entry key value) ;

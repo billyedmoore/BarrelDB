@@ -3,9 +3,10 @@ type dbError =
   | NoDatabaseOpen
   | DatabaseNotFound
   | DatabaseExists
+  | KeyNotFound
+  | FileReadError
 
-type keyDirEntry =
-  {file_name: string; timestamp: int; value_size: int; value_pos: int}
+type keyDirEntry = {filename: string; timestamp: int; value_size: int; pos: int}
 
 type dbSession =
   { db_name: string

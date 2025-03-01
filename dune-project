@@ -17,9 +17,7 @@
  (name barrelDB)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends (ocaml (>= 5.2))
-          dune 
-          (ounit2 :with-test))
+ (depends ocaml (ounit2 :with-test))
  (tags
   ("add topics" "to describe" your project)))
 
