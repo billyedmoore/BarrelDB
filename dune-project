@@ -9,7 +9,7 @@
 
 (authors "Billy Moore <author@example.com>")
 
-(license LICENSE)
+(license MIT)
 
 (documentation https://url/to/documentation)
 
@@ -17,7 +17,9 @@
  (name barrelDB)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml)
+ (depends (ocaml (>= 5.2))
+          dune 
+          (ounit2 :with-test))
  (tags
   ("add topics" "to describe" your project)))
 
