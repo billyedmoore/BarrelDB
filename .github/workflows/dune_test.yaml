@@ -1,0 +1,25 @@
+name: Run Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v1
+        with:
+          ocaml-version: '5.3.0'
+
+      - name: Install Dune
+        run: opam install dune
+
+      - name: Install dependencies
+        run: dune install
+
+      - name: Run Dune tests
+        run: dune runtest
