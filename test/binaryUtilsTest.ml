@@ -24,11 +24,3 @@ let test_bytes_of_int_max_value _ =
   assert_equal
     (int_list_of_bytes (BarrelDB.BinaryUtils.bytes_of_int ~value:65535 4))
     [255; 255; 0; 0]
-
-let suite =
-  "Testing Tests"
-  >::: [ "test_bytes_of_int_empty" >:: test_bytes_of_int_empty
-       ; "test_bytes_of_int_small_value" >:: test_bytes_of_int_small_value
-       ; "test_bytes_of_int_max_value" >:: test_bytes_of_int_max_value ]
-
-let () = run_test_tt_main suite
