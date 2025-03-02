@@ -14,7 +14,12 @@ type dbSession =
   ; active_file: string }
 
 type diskEntry =
-  {timestamp: int; key_size: int; value_size: int; key: string; value: string}
+  { timestamp: int
+  ; tombstone: bool
+  ; key_size: int
+  ; value_size: int
+  ; key: string
+  ; value: string }
 
 let err_to_string err =
   match err with
@@ -53,8 +58,10 @@ let get_random_string (length : int) : string =
   in
   loop length ""
 
-let create_disk_entry (key : string) (value : string) : diskEntry =
+let create_disk_entry (key : string) (value : string) (tombstone : bool) :
+    diskEntry =
   { timestamp= int_of_float (Unix.time ())
+  ; tombstone
   ; key_size= String.length key
   ; value_size= String.length value
   ; key
@@ -75,6 +82,7 @@ let scan_record_chunk (file_stream : in_channel) : (diskEntry * int) option =
   let crc = read_input_bytes file_stream crc_size in
   let timestamp_size = 4 in
   let timestamp = read_input_bytes file_stream timestamp_size in
+  let tombstone = read_input_bytes file_stream 1 in
   let size_size = 4 in
   let key_size = read_input_bytes file_stream size_size in
   let value_size = read_input_bytes file_stream size_size in
@@ -83,10 +91,12 @@ let scan_record_chunk (file_stream : in_channel) : (diskEntry * int) option =
   let key = read_input_bytes file_stream key_size_as_int in
   let value = read_input_bytes file_stream value_size_as_int in
   let payload =
-    Bytes.concat Bytes.empty [timestamp; key_size; value_size; key; value]
+    Bytes.concat Bytes.empty
+      [timestamp; tombstone; key_size; value_size; key; value]
   in
   let disk_entry =
     { timestamp= BinaryUtils.int_of_bytes timestamp
+    ; tombstone= (if BinaryUtils.int_of_bytes tombstone = 1 then true else false)
     ; key_size= key_size_as_int
     ; value_size= value_size_as_int
     ; key= Bytes.to_string key
@@ -164,8 +174,8 @@ let encode_disk_entry (disk_entry : diskEntry) : Bytes.t =
   let payload =
     Bytes.concat Bytes.empty
       [ BinaryUtils.bytes_of_int ~value:disk_entry.timestamp 4
-      ; (* 32 bit *)
-        BinaryUtils.bytes_of_int ~value:disk_entry.key_size 4
+      ; BinaryUtils.bytes_of_int ~value:(Bool.to_int disk_entry.tombstone) 1
+      ; BinaryUtils.bytes_of_int ~value:disk_entry.key_size 4
       ; BinaryUtils.bytes_of_int ~value:disk_entry.value_size 4
       ; Bytes.of_string disk_entry.key
       ; Bytes.of_string disk_entry.value ]
@@ -182,13 +192,17 @@ let commit_entry (db_session : dbSession) (disk_entry : diskEntry) =
   let f = open_out_gen [Open_append; Open_binary] 0o600 filename in
   output_bytes f (encode_disk_entry disk_entry) ;
   close_out f ;
-  let dir_entry =
-    { filename
-    ; value_size= disk_entry.value_size
-    ; pos= current_length
-    ; timestamp= disk_entry.timestamp }
-  in
-  Hashtbl.add db_session.key_dir disk_entry.key dir_entry
+  match disk_entry.tombstone with
+  | true ->
+      Hashtbl.remove db_session.key_dir disk_entry.key
+  | false ->
+      let dir_entry =
+        { filename
+        ; value_size= disk_entry.value_size
+        ; pos= current_length
+        ; timestamp= disk_entry.timestamp }
+      in
+      Hashtbl.add db_session.key_dir disk_entry.key dir_entry
 
 (* External API *)
 
@@ -215,10 +229,12 @@ let get (db_session : dbSession) (key : string) : (string, dbError) result =
       Result.error FileReadError
 
 let put db_session key value =
-  commit_entry db_session (create_disk_entry key value) ;
+  commit_entry db_session (create_disk_entry key value false) ;
   Option.none
 
-let delete _ _ = Option.some NotImplementedError
+let delete db_session key =
+  commit_entry db_session (create_disk_entry key "" true) ;
+  Option.none
 
 let list_keys db_session =
   Result.ok (Hashtbl.fold (fun key _ acc -> key :: acc) db_session.key_dir [])
