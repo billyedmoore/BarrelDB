@@ -7,7 +7,11 @@ let print_result_or_error (res : (string, BarrelDB.Db.dbError) result) : unit =
   | Ok value ->
       Printf.printf "%s\n" value
 
+let print (toc : BarrelDB.Tokenize.token) =
+  print_endline (BarrelDB.Tokenize.string_of_token toc)
+
 let _ =
+  List.iter print (BarrelDB.Tokenize.tokenize_string "OPEN \"database.db\"") ;
   match BarrelDB.Db.create db_name with
   | Error err ->
       print_endline (BarrelDB.Db.err_to_string err)

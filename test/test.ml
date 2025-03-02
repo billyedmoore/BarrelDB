@@ -12,6 +12,10 @@ let suite =
        ; "test_db_delete" >:: DbTest.test_delete_from_db
        ; "test_db_list_keys" >:: DbTest.test_list_keys_from_db
        ; "test_db_list_keys_with_removed_keys"
-         >:: DbTest.test_list_keys_with_keys_removed_db ]
+         >:: DbTest.test_list_keys_with_keys_removed_db
+       ; "test_open_tokenize" >:: TokenizeTest.test_open_tokenize
+       ; "test_brackets_tokenize" >:: TokenizeTest.test_brackets_tokenize
+       ; "test_single_token_tokenize" >:: TokenizeTest.test_brackets_tokenize
+       ; "test_put_tokenize" >:: TokenizeTest.test_put_tokenize ]
 
 let () = run_test_tt_main suite
