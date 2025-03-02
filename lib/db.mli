@@ -11,7 +11,8 @@ type keyDirEntry = {filename: string; timestamp: int; value_size: int; pos: int}
 type dbSession =
   { db_name: string
   ; key_dir: (string, keyDirEntry) Hashtbl.t
-  ; active_file: string }
+  ; mutable active_file: string
+  ; mutex: Mutex.t }
 
 val err_to_string : dbError -> string
 (** dbError to a string **)

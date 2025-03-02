@@ -11,7 +11,8 @@ type keyDirEntry = {filename: string; timestamp: int; value_size: int; pos: int}
 type dbSession =
   { db_name: string
   ; key_dir: (string, keyDirEntry) Hashtbl.t
-  ; active_file: string }
+  ; mutable active_file: string
+  ; mutex: Mutex.t }
 
 type diskEntry =
   { timestamp: int
@@ -111,18 +112,24 @@ let scan_record_chunk (file_stream : in_channel) : (diskEntry * int) option =
 (* Raises Not_found if key not in database *)
 let get_value (db_session : dbSession) (key : string) : string =
   (* TODO: switch to results based error handling *)
+  Mutex.lock db_session.mutex ;
   let key_dir_entry = Hashtbl.find db_session.key_dir key in
   let f = open_in_gen [Open_rdonly; Open_binary] 0o600 key_dir_entry.filename in
   seek_in f key_dir_entry.pos ;
   match scan_record_chunk f with
   | None ->
+      Mutex.unlock db_session.mutex ;
       raise (Invalid_argument "Couldn't scan record chunk.")
   | Some disk_entry_and_pos ->
+      Mutex.unlock db_session.mutex ;
       let disk_entry, _ = disk_entry_and_pos in
       disk_entry.value
 
 let new_database_session (db_name : string) =
-  {db_name; key_dir= Hashtbl.create 100; active_file= get_random_string 10}
+  { db_name
+  ; key_dir= Hashtbl.create 100
+  ; active_file= get_random_string 10
+  ; mutex= Mutex.create () }
 
 (* Side-effect: adds the keys from file_stream to the HashMap key_dir in db_session *)
 let rec scan_file (db_session : dbSession) (file_stream : in_channel)
@@ -160,6 +167,7 @@ let load_file (db_session : dbSession) (filename : string) : unit =
 
 let load_database (db_name : string) : dbSession =
   let db_session = new_database_session db_name in
+  Mutex.lock db_session.mutex ;
   let files = Array.to_list (Sys.readdir db_name) in
   let rec load_files (files : string list) =
     match files with
@@ -168,7 +176,9 @@ let load_database (db_name : string) : dbSession =
     | file :: remaining_files ->
         load_file db_session file ; load_files remaining_files
   in
-  load_files files ; db_session
+  load_files files ;
+  Mutex.unlock db_session.mutex ;
+  db_session
 
 let encode_disk_entry (disk_entry : diskEntry) : Bytes.t =
   let payload =
@@ -189,12 +199,14 @@ let commit_entry (db_session : dbSession) (disk_entry : diskEntry) =
   let filename = db_session.db_name ^ "/" ^ db_session.active_file in
   let current_length = get_file_size filename in
   if current_length = 0 then close_out (open_out filename) ;
+  Mutex.lock db_session.mutex ;
   let f = open_out_gen [Open_append; Open_binary] 0o600 filename in
   output_bytes f (encode_disk_entry disk_entry) ;
   close_out f ;
   match disk_entry.tombstone with
   | true ->
-      Hashtbl.remove db_session.key_dir disk_entry.key
+      Hashtbl.remove db_session.key_dir disk_entry.key ;
+      Mutex.unlock db_session.mutex
   | false ->
       let dir_entry =
         { filename
@@ -202,7 +214,8 @@ let commit_entry (db_session : dbSession) (disk_entry : diskEntry) =
         ; pos= current_length
         ; timestamp= disk_entry.timestamp }
       in
-      Hashtbl.add db_session.key_dir disk_entry.key dir_entry
+      Hashtbl.add db_session.key_dir disk_entry.key dir_entry ;
+      Mutex.unlock db_session.mutex
 
 (* External API *)
 
@@ -237,4 +250,7 @@ let delete db_session key =
   Option.none
 
 let list_keys db_session =
-  Result.ok (Hashtbl.fold (fun key _ acc -> key :: acc) db_session.key_dir [])
+  Mutex.lock db_session.mutex ;
+  let keys = Hashtbl.fold (fun key _ acc -> key :: acc) db_session.key_dir [] in
+  Mutex.unlock db_session.mutex ;
+  Result.ok keys
