@@ -16,6 +16,6 @@ let suite =
        ; "test_open_tokenize" >:: TokenizeTest.test_open_tokenize
        ; "test_brackets_tokenize" >:: TokenizeTest.test_brackets_tokenize
        ; "test_single_token_tokenize" >:: TokenizeTest.test_brackets_tokenize
-       ; "test_put_tokenize" >:: TokenizeTest.test_put_tokenize ]
+       ; "test_put_tokenize" >:: TokenizeTest.test_put_tokenize]
 
 let () = run_test_tt_main suite

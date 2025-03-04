@@ -5,7 +5,7 @@ let test_open_tokenize _ =
     List.map BarrelDB.Tokenize.string_of_token
       (BarrelDB.Tokenize.tokenize_string "OPEN \"database.db\"")
   in
-  assert_equal strs ["OPEN"; "QUOTE"; "STRING(database.db)"; "QUOTE"]
+  assert_equal strs ["OPEN"; "STRING(database.db)"]
 
 let test_brackets_tokenize _ =
   let strs =
@@ -13,12 +13,7 @@ let test_brackets_tokenize _ =
       (BarrelDB.Tokenize.tokenize_string "OPEN (\"database.db\")")
   in
   assert_equal strs
-    [ "OPEN"
-    ; "OPEN_BRACKET"
-    ; "QUOTE"
-    ; "STRING(database.db)"
-    ; "QUOTE"
-    ; "CLOSE_BRACKET" ]
+    ["OPEN"; "OPEN_BRACKET"; "STRING(database.db)"; "CLOSE_BRACKET"]
 
 let test_single_token_tokenize _ =
   let strs =
@@ -33,17 +28,4 @@ let test_put_tokenize _ =
       (BarrelDB.Tokenize.tokenize_string
          "PUT \"THIS IS A KEY\" \"THIS IS A VALUE\"" )
   in
-  assert_equal strs
-    [ "PUT"
-    ; "QUOTE"
-    ; "STRING(THIS)"
-    ; "STRING(IS)"
-    ; "STRING(A)"
-    ; "STRING(KEY)"
-    ; "QUOTE"
-    ; "QUOTE"
-    ; "STRING(THIS)"
-    ; "STRING(IS)"
-    ; "STRING(A)"
-    ; "STRING(VALUE)"
-    ; "QUOTE" ]
+  assert_equal strs ["PUT"; "STRING(THIS IS A KEY)"; "STRING(THIS IS A VALUE)"]
