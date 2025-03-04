@@ -1,7 +1,10 @@
-# BarrelDB 
+# PostMixDB
 
 Simple persistent key-value store based on the [Raik's bitcask paper](https://riak.com/assets/bitcask-intro.pdf),
 heavily inspired by [avinassh's py-caskdb](https://github.com/avinassh/py-caskdb).
+
+Previously called "BarrelDB" but I stumbled across another bitcask implementation with this name [here](https://github.com/mr-karan/barreldb),
+so I renamed it to [PostMixDB](https://en.wikipedia.org/wiki/Premix_and_postmix).
 
 ## Query Language
 
