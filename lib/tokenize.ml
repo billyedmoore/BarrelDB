@@ -1,4 +1,5 @@
 type token =
+  | NOP_TOKEN
   | OPEN_TOKEN
   | CREATE_TOKEN
   | PUT_TOKEN
@@ -13,6 +14,8 @@ type token =
 let token_from_buffer (buffer : char list) =
   let str = String.of_seq (List.to_seq buffer) in
   match String.lowercase_ascii str with
+  | "" ->
+      NOP_TOKEN
   | "open" ->
       OPEN_TOKEN
   | "create" ->
@@ -56,26 +59,21 @@ let string_of_token (input : token) =
       "CLOSE_BRACKET"
   | STRING_TOKEN s ->
       "STRING(" ^ s ^ ")"
+  | NOP_TOKEN ->
+      "NOP"
 
 let tokenize_string (str : string) =
   let rec chew_string (str_as_list : char list) (buffer : char list)
       (tokens : token list) : token list =
     match str_as_list with
-    | [] -> (
-      match buffer with [] -> tokens | _ -> tokens @ [token_from_buffer buffer]
-      )
-    | (' ' | '\n') :: t -> (
-      match buffer with
-      | [] ->
-          chew_string t [] tokens
-      | _ ->
-          chew_string t [] (tokens @ [token_from_buffer buffer]) )
-    | '"' :: t -> (
-      match buffer with
-      | [] ->
-          handle_quote t [] tokens
-      | _ ->
-          handle_quote t [] (tokens @ [token_from_buffer buffer]) )
+    | [] ->
+        tokens @ [token_from_buffer buffer]
+    | (' ' | '\n') :: t ->
+        chew_string t [] (tokens @ [token_from_buffer buffer])
+    | ';' :: t ->
+        chew_string t [] (tokens @ [token_from_buffer buffer; SEMICOLON_TOKEN])
+    | '"' :: t ->
+        handle_quote t [] (tokens @ [token_from_buffer buffer])
     | h :: t ->
         chew_string t (buffer @ [h]) tokens
   and handle_quote (str_as_list : char list) (buffer : char list)
@@ -89,4 +87,5 @@ let tokenize_string (str : string) =
     | c :: tail ->
         handle_quote tail (buffer @ [c]) tokens
   in
-  chew_string (List.of_seq (String.to_seq str)) [] []
+  let isnt_nop e = match e with NOP_TOKEN -> false | _ -> true in
+  List.filter isnt_nop (chew_string (List.of_seq (String.to_seq str)) [] [])

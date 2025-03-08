@@ -8,12 +8,20 @@ let test_parse _ =
   let strs = List.map PostMixDB.Parse.string_of_ast asts in
   assert_equal strs ["OPEN:\n\tSTRING database.db\n"]
 
+let test_parse_nested _ =
+  let asts =
+    PostMixDB.Parse.parse
+      (PostMixDB.Tokenize.tokenize_string "OPEN GET GET \"KEY\";")
+  in
+  let strs = List.map PostMixDB.Parse.string_of_ast asts in
+  assert_equal strs ["OPEN:\n\tGET:\n\t\tGET:\n\t\t\tSTRING KEY\n"]
+
 let test_parse_immediate_semicolon _ =
   let asts =
     PostMixDB.Parse.parse (PostMixDB.Tokenize.tokenize_string "LIST;")
   in
   let strs = List.map PostMixDB.Parse.string_of_ast asts in
-  assert_equal strs ["LIST\n\t"]
+  assert_equal strs ["LIST\n"]
 
 let test_parse_multiple_trees _ =
   let asts =
@@ -36,3 +44,4 @@ let test_parse_missing_operand _ =
    fun () -> PostMixDB.Parse.parse (PostMixDB.Tokenize.tokenize_string "OPEN ;")
   in
   assert_raises (Failure "Invalid Non-terminal Statement") parse
+
