@@ -5,9 +5,9 @@ description: "A longer description"
 authors: ["Billy Moore <author@example.com>"]
 license: "MIT"
 tags: ["add topics" "to describe" "your" "project"]
-homepage: "https://github.com/billyedmoore/BarrelDB"
+homepage: "https://github.com/billyedmoore/PostMixDB"
 doc: "https://url/to/documentation"
-bug-reports: "https://github.com/billyedmoore/BarrelDB/issues"
+bug-reports: "https://github.com/billyedmoore/PostMixDB/issues"
 depends: [
   "dune" {>= "3.17"}
   "ocaml"
@@ -28,4 +28,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/billyedmoore/BarrelDB.git"
+dev-repo: "git+https://github.com/billyedmoore/PostMixDB.git"

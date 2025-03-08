@@ -12,15 +12,15 @@ let int_list_of_bytes (byts : Bytes.t) =
 
 let test_bytes_of_int_empty _ =
   assert_equal
-    (int_list_of_bytes (BarrelDB.BinaryUtils.bytes_of_int ~value:0 1))
+    (int_list_of_bytes (PostMixDB.BinaryUtils.bytes_of_int ~value:0 1))
     [0]
 
 let test_bytes_of_int_small_value _ =
   assert_equal
-    (int_list_of_bytes (BarrelDB.BinaryUtils.bytes_of_int ~value:64 8))
+    (int_list_of_bytes (PostMixDB.BinaryUtils.bytes_of_int ~value:64 8))
     [64; 0; 0; 0; 0; 0; 0; 0]
 
 let test_bytes_of_int_max_value _ =
   assert_equal
-    (int_list_of_bytes (BarrelDB.BinaryUtils.bytes_of_int ~value:65535 4))
+    (int_list_of_bytes (PostMixDB.BinaryUtils.bytes_of_int ~value:65535 4))
     [255; 255; 0; 0]

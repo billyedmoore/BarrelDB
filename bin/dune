@@ -1,4 +1,4 @@
 (executable
- (public_name barrelDB)
+ (public_name postMixDB)
  (name main)
- (libraries unix barrelDB))
+ (libraries unix postMixDB))

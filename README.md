@@ -8,7 +8,7 @@ so I renamed it to [PostMixDB](https://en.wikipedia.org/wiki/Premix_and_postmix)
 
 ## Query Language
 
-BarrelDB (hopefully will) support a very minimal query language.
+PostMixDB (hopefully will) support a very minimal query language.
 
 + `OPEN folder_name` - Open database.
 + `CREATE folder_name` - Create and open database.
