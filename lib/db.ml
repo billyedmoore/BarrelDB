@@ -23,7 +23,7 @@ type diskEntry =
   ; key: string
   ; value: string }
 
-let err_to_string err =
+let string_of_dberror err =
   match err with
   | NotImplementedError ->
       "NotImplementedError - Function is yet to be implemented."

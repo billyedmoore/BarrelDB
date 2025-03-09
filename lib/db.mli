@@ -15,7 +15,7 @@ type dbSession =
   ; mutable active_file: string
   ; mutex: Mutex.t }
 
-val err_to_string : dbError -> string
+val string_of_dberror : dbError -> string
 (** dbError to a string **)
 
 val create : string -> (dbSession, dbError) result
