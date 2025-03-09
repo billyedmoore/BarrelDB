@@ -1,6 +1,7 @@
 type dbError =
   | NotImplementedError
   | NoDatabaseOpen
+  | DatabaseAlreadyOpen
   | DatabaseNotFound
   | DatabaseExists
   | KeyNotFound
@@ -32,6 +33,8 @@ let err_to_string err =
       "DatabaseNotFound - Database you tried to load could not be found."
   | KeyNotFound ->
       "KeyNotFound - Key not found in database."
+  | DatabaseAlreadyOpen ->
+      "DatabaseAlreadyOpen - A database session is already open."
   | FileReadError ->
       "FileReadError - Error with file read."
   | DatabaseExists ->
@@ -251,6 +254,9 @@ let delete db_session key =
 
 let list_keys db_session =
   Mutex.lock db_session.mutex ;
-  let keys = Hashtbl.fold (fun key _ acc -> key :: acc) db_session.key_dir [] in
+  let unsorted_keys =
+    Hashtbl.fold (fun key _ acc -> key :: acc) db_session.key_dir []
+  in
   Mutex.unlock db_session.mutex ;
+  let keys = List.sort String.compare unsorted_keys in
   Result.ok keys

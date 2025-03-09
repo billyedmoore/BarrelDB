@@ -44,4 +44,3 @@ let test_parse_missing_operand _ =
    fun () -> PostMixDB.Parse.parse (PostMixDB.Tokenize.tokenize_string "OPEN ;")
   in
   assert_raises (Failure "Invalid Non-terminal Statement") parse
-

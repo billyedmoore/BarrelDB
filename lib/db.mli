@@ -1,6 +1,7 @@
 type dbError =
   | NotImplementedError
   | NoDatabaseOpen
+  | DatabaseAlreadyOpen
   | DatabaseNotFound
   | DatabaseExists
   | KeyNotFound
