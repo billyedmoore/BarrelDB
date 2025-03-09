@@ -86,7 +86,7 @@ and parse_open tokens : Tokenize.token list * ast =
 
 and parse_create tokens : Tokenize.token list * ast =
   match tokens with
-  | Tokenize.OPEN_TOKEN :: tail ->
+  | Tokenize.CREATE_TOKEN :: tail ->
       let remaining_tokens, dbName = parse_non_terminal_statement tail in
       (remaining_tokens, CREATE dbName)
   | _ ->
