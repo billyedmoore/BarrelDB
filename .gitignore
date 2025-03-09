@@ -29,4 +29,5 @@ setup.log
 _opam/
 
 # I think I am funny (I am not), this is the where db is being saved
+*.db/
 important_data.db/*
