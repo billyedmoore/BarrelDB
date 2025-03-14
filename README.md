@@ -62,9 +62,7 @@ example `PUT GET "new-key" GET "new-value";` is a valid statement meaning:
 3. Put a new value with with the key from 1. and value from 2.
 
 ## Outstanding Improvements 
-+ Change error handling in `PostMixDB.Tokenization` & `PostMixDB.Parse` to results 
- based errors (errors as values as opposed to errors as exceptions), during this change modify
- the REPL to handle these errors gracefully (currently crashes)
 + Parse brackets to allow for more elegant nested statements
 + Add `PostMixDB.Db.merge` to merge in the background, decide when this should be 
  triggered
++ Add `PostMixDB.Db.close` to close the dbSession without closing and reopening the REPL
