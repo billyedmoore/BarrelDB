@@ -93,3 +93,26 @@ let test_get_long_value_from_db _ =
           failwith (PostMixDB.Db.string_of_dberror err)
       | Ok value ->
           assert_equal value known_value ) )
+
+let test_open_db _ =
+  let create_asts =
+    Result.get_ok
+      (PostMixDB.Parse.parse
+         (Result.get_ok
+            (PostMixDB.Tokenize.tokenize_string
+               "CREATE \"test_open_db.db\"; PUT \"key1\" \"value\"; PUT \
+                \"Another key\" \"value\";" ) ) )
+  in
+  ignore (PostMixDB.Eval.evaluate_asts create_asts None) ;
+  let open_ast =
+    Result.get_ok
+      (PostMixDB.Parse.parse
+         (Result.get_ok
+            (PostMixDB.Tokenize.tokenize_string
+               "OPEN \"test_open_db.db\"; LIST;" ) ) )
+  in
+  match PostMixDB.Eval.evaluate_asts open_ast None with
+  | Ok (INFO_STRING_RESULT str) ->
+      assert_equal str "KEYS: [Another key, key1]"
+  | _ ->
+      failwith "Expected the result to be INFO_STRING_RESULT but isn't"
