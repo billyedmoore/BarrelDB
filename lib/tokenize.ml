@@ -62,7 +62,7 @@ let string_of_token (input : token) =
   | NOP_TOKEN ->
       "NOP"
 
-let tokenize_string (str : string) =
+let tokenize_string (str : string) : (token list, Db.dbError) result =
   let rec chew_string (str_as_list : char list) (buffer : char list)
       (tokens : token list) : token list =
     match str_as_list with
@@ -88,4 +88,8 @@ let tokenize_string (str : string) =
         handle_quote tail (buffer @ [c]) tokens
   in
   let isnt_nop e = match e with NOP_TOKEN -> false | _ -> true in
-  List.filter isnt_nop (chew_string (List.of_seq (String.to_seq str)) [] [])
+  try
+    Result.ok
+      (List.filter isnt_nop
+         (chew_string (List.of_seq (String.to_seq str)) [] []) )
+  with Failure err -> Result.error (Db.TokenizationError err)

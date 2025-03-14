@@ -8,6 +8,6 @@ type ast =
   | LIST
   | NOP
 
-val parse : Tokenize.token list -> ast list
+val parse : Tokenize.token list -> (ast list, Db.dbError) result
 
 val string_of_ast : ast -> string
