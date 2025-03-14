@@ -6,7 +6,7 @@ let get_statement () =
           print_string "PostMix >"
       | _ ->
           print_string "-" ) ;
-    let line = read_line () in
+    let line = String.trim (read_line ()) in
     match String.ends_with ~suffix:";" line with
     | true ->
         buffer ^ line
