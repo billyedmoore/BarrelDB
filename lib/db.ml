@@ -166,11 +166,14 @@ let rec scan_file (db_session : dbSession) (file_stream : in_channel)
           scan_file db_session file_stream filename )
 
 let load_file (db_session : dbSession) (filename : string) : unit =
-  match get_file_size filename with
+  match get_file_size (db_session.db_name ^ "/" ^ filename) with
   | 0 ->
       ()
   | _ ->
-      let f = open_in_gen [Open_rdonly; Open_binary] 0o600 filename in
+      let f =
+        open_in_gen [Open_rdonly; Open_binary] 0o600
+          (db_session.db_name ^ "/" ^ filename)
+      in
       scan_file db_session f filename ;
       close_in f
 
