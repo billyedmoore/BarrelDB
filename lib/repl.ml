@@ -32,9 +32,17 @@ let string_of_result (result_result : (Eval.evaluationResult, Db.dbError) result
 let run_repl () =
   let rec run_repl_rec (db_session_opt : Db.dbSession option) : unit =
     let line = get_statement () in
-    let tokens = Tokenize.tokenize_string line in
-    let asts = Parse.parse tokens in
-    let result = Eval.evaluate_asts asts db_session_opt in
+    let result =
+      match Tokenize.tokenize_string line with
+      | Ok tokens -> (
+        match Parse.parse tokens with
+        | Ok asts ->
+            Eval.evaluate_asts asts db_session_opt
+        | Error err ->
+            Result.error err )
+      | Error err ->
+          Result.error err
+    in
     print_endline (string_of_result result) ;
     let new_db_session =
       match result with

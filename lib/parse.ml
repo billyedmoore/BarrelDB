@@ -150,4 +150,6 @@ and parse_program (tokens : Tokenize.token list) (trees : ast list) =
       let isnt_nop (tree : ast) = match tree with NOP -> false | _ -> true in
       parse_program unconsumed_tokens (List.filter isnt_nop (trees @ [tree]))
 
-let parse (tokens : Tokenize.token list) : ast list = parse_program tokens []
+let parse (tokens : Tokenize.token list) : (ast list, Db.dbError) result =
+  try Result.ok (parse_program tokens [])
+  with Failure err -> Result.error (Db.SyntaxError err)

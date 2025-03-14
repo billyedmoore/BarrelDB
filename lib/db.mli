@@ -6,6 +6,8 @@ type dbError =
   | DatabaseExists
   | KeyNotFound
   | FileReadError
+  | TokenizationError of string
+  | SyntaxError of string
 
 type keyDirEntry = {filename: string; timestamp: int; value_size: int; pos: int}
 

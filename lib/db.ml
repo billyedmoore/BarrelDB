@@ -6,6 +6,8 @@ type dbError =
   | DatabaseExists
   | KeyNotFound
   | FileReadError
+  | TokenizationError of string
+  | SyntaxError of string
 
 type keyDirEntry = {filename: string; timestamp: int; value_size: int; pos: int}
 
@@ -39,6 +41,10 @@ let string_of_dberror err =
       "FileReadError - Error with file read."
   | DatabaseExists ->
       "DatabaseExists - Database already exists."
+  | TokenizationError err ->
+      "TokenizationError - " ^ err
+  | SyntaxError err ->
+      "SyntaxError - " ^ err
 
 let create_dir path =
   if not (Sys.file_exists path) then Sys.mkdir path 0o777 (* Full Permissions *)
